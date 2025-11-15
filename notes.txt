@@ -1,0 +1,43 @@
+// useProjectPersistence.ts
+import { useRef, useEffect } from "react";
+import { db } from "./db";
+import type { Project } from "./types";
+import debounce from "lodash/debounce";
+
+export function useProjectAutoSave(
+  projectRef: { current: Project | null },
+  projectId: string,
+  options?: { autosaveMs?: number; snapshotInterval?: number }
+) {
+  const autosaveMs = options?.autosaveMs ?? 800;
+  const snapshotInterval = options?.snapshotInterval ?? 30000; // snapshot every 30s
+
+  const saveFn = useRef(
+    debounce(async () => {
+      const p = projectRef.current;
+      if (!p) return;
+      await db.saveProject(p);
+    }, autosaveMs)
+  );
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const p = projectRef.current;
+      if (!p) return;
+      await db.snapshotProject(projectId, "autosnapshot");
+      // optionally trim older snapshots here
+    }, snapshotInterval);
+
+    return () => {
+      clearInterval(interval);
+      saveFn.current.cancel();
+    };
+  }, [projectId, snapshotInterval]);
+
+  // call this when model mutates
+  function markDirty() {
+    saveFn.current();
+  }
+
+  return { markDirty, forceSave: saveFn.current.flush };
+}

@@ -1,5 +1,11 @@
+import PlannerWrapper from "./components/planner-wrapper";
+
 function App() {
-  return <></>;
+  return (
+    <>
+      <PlannerWrapper />
+    </>
+  );
 }
 
 export default App;
